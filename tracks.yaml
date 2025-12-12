@@ -21,7 +21,7 @@ tracks:
     release_inc: '1'
     release_repo_url: null
     release_tag: :{version}
-    ros_distro: rolling
+    ros_distro: kilted
     vcs_type: git
     vcs_uri: https://github.com/fujitatomoya/ros2ai.git
     version: :{auto}
