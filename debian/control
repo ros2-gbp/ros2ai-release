@@ -1,0 +1,12 @@
+Source: ros-jazzy-ros2ai
+Section: misc
+Priority: optional
+Maintainer: Tomoya Fujita <tomoya.fujita825@gmail.com>
+Build-Depends: debhelper (>= 9.0.0), python3-pytest <!nocheck>, python3-pytest-timeout <!nocheck>, ros-jazzy-ament-copyright <!nocheck>, ros-jazzy-ament-flake8 <!nocheck>, ros-jazzy-ament-pep257 <!nocheck>, ros-jazzy-ament-xmllint <!nocheck>, ros-jazzy-geometry-msgs <!nocheck>, ros-jazzy-launch <!nocheck>, ros-jazzy-launch-ros <!nocheck>, ros-jazzy-launch-testing <!nocheck>, ros-jazzy-launch-testing-ros <!nocheck>, ros-jazzy-std-msgs <!nocheck>, ros-jazzy-test-msgs <!nocheck>, ros-jazzy-ros-workspace, python3-all, python3-setuptools, dh-python
+Homepage: 
+Standards-Version: 3.9.2
+
+Package: ros-jazzy-ros2ai
+Architecture: any
+Depends: ${python3:Depends}, ${misc:Depends}, curl, libcurl4-openssl-dev, python3-openai, python3-validators, ros-jazzy-ros2cli, ros-jazzy-ros-workspace
+Description: The OpenAI command for ROS 2 command line tools.
