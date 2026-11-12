@@ -1,3 +1,26 @@
+## ros2ai (humble) - 1.0.0-1
+
+The packages in the `ros2ai` repository were released into the `humble` distro by running `/usr/bin/bloom-release --rosdistro humble --track humble ros2ai` on `Thu, 12 Nov 2026 22:48:58 -0000`
+
+The `ros2ai` package was released.
+
+Version of package(s) in repository `ros2ai`:
+
+- upstream repository: https://github.com/fujitatomoya/ros2ai.git
+- release repository: https://github.com/ros2-gbp/ros2ai-release.git
+- rosdistro version: `0.1.3-5`
+- old version: `0.1.3-5`
+- new version: `1.0.0-1`
+
+Versions of tools used:
+
+- bloom version: `0.14.4`
+- catkin_pkg version: `1.1.1`
+- rosdep version: `0.27.0`
+- rosdistro version: `1.1.0`
+- vcstools version: `0.1.42`
+
+
 ## ros2ai (jazzy) - 1.0.0-1
 
 The packages in the `ros2ai` repository were released into the `jazzy` distro by running `/usr/bin/bloom-release --rosdistro jazzy --track jazzy ros2ai` on `Thu, 12 Nov 2026 22:48:01 -0000`
