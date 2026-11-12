@@ -58,9 +58,9 @@ RUN apt-get update \
 
 # Adapt pip install option based on distro (technically ubuntu version)
 RUN if [ "$ROS_DISTRO" = "humble" ]; then \
-        pip install openai ollama validators --ignore-installed; \
+        pip install openai validators --ignore-installed; \
     else \
-        pip install openai ollama validators --break-system-packages --ignore-installed; \
+        pip install openai validators --break-system-packages --ignore-installed; \
     fi
 
 # Build and source colcon workspace
@@ -79,7 +79,7 @@ USER ${USERNAME}
 WORKDIR /home/${USERNAME}
 
 # Overwrite as environmental variable so that entrypoint can rely on those
-# OPENAI_API_KEY should not be included here, that is required for the runtime
+# ROS2AI_API_KEY should not be included here, that is required for the runtime
 ENV COLCON_WS=${COLCON_WS}
 ENV ROS_DISTRO=${ROS_DISTRO}
 #ENTRYPOINT ["/ros_entrypoint.sh"]
