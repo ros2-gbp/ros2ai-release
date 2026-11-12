@@ -9,7 +9,7 @@ page_number: true
 
 # ***ros2ai Next-Gen ROS 2 CLI***
 
-[ros2ai](https://github.com/fujitatomoya/ros2ai) is a <span style="color:red">next-generation</span> [ROS 2](https://github.com/ros2) command line interface extension with [OpenAI](https://openai.com/) and [Ollama](https://github.com/ollama/ollama)
+[ros2ai](https://github.com/fujitatomoya/ros2ai) is a <span style="color:red">next-generation</span> [ROS 2](https://github.com/ros2) command line interface extension with [OpenAI](https://openai.com/), [Anthropic](https://www.anthropic.com/) and [Ollama](https://github.com/ollama/ollama)
 
 <!---
 # Comment Here
@@ -29,27 +29,7 @@ page_number: true
 
 ---
 
-<video controls="controls" width="1000" src="https://github.com/user-attachments/assets/a5d4dda6-cd6b-41d1-8038-40e4906082b0">
-
-<!---
-# This demo only includes status check and query command.
---->
-
----
-
-<video controls="controls" width="1000" src="https://github.com/user-attachments/assets/6b6d8038-6d5a-4aaf-aace-bb9af4995145">
-
-<!---
-# Execution Demo only with multiple language.
---->
-
----
-
-<video controls="controls" width="1000" src="https://github.com/fujitatomoya/ros2ai/assets/43395114/2af4fd44-2ccf-472c-9153-c3c19987dc96">
-
-<!---
-# Docker container demonstration
---->
+<video controls="controls" width="1000" src="./images/ros2ai_demo.mp4">
 
 ---
 
@@ -60,8 +40,8 @@ page_number: true
 - Multiple Language Support.
 - Support beginners and students. (your best trainer)
 - Easy to use for everyone.
-- Dedicated / AI based Support (your own concierge)
-- Bridge / Proxy to [LLM](https://en.wikipedia.org/wiki/Large_language_model)
+- No extra dependencies instead of ros2cli.
+- Agnostic from LLM service (OpenAI, Anthropic, Ollama or any OpenAI compatible endpoint)
 
 <!---
 # Comment Here
@@ -107,7 +87,7 @@ i believe that is exactly where AI comes to play. instead of paying the resource
 
 # Design
 
-- <span style="color:red;">***SIMPLE***</span>. one of the original motivation, it has to be simple as much as possible. That is said that it would be even better to remove all sub-commands, just `ros2 ai <whatever your request>` if that is possible.
+- <span style="color:red;">***SIMPLE***</span>. one of the original motivation, it has to be simple as much as possible. That is said that there is no sub-command at all, just `ros2 ai <whatever your request>`.
 
 <!---
 # Comment Here
@@ -123,63 +103,32 @@ i believe that is exactly where AI comes to play. instead of paying the resource
 
 ---
 
-- `status` command is to check if `ros2ai` is configured properly.
-- `query` command is to ask any questions related to ROS 2. This is a single-shot completion, no session is supported currently. OpenAI system role attribution is set to default, but can be reconfigurable.
-- `exec` command is that AI executes the appropriate command based on the requests. OpenAI system role attribution is set to default, but can be reconfigurable.
+- `ros2 ai "<request>"` is the only entry point, the request can be any question related to ROS 2, or the operation against the ROS 2 system. LLM system role attribution is set to default, but can be reconfigurable.
+- AI decides by itself whether to answer the question, or to inspect and operate the ROS 2 system via [Function Calling](https://platform.openai.com/docs/guides/function-calling) with [ros2cli](https://github.com/ros2/ros2cli) tools. The commands that change the system require the user confirmation.
+- `ros2 ai --status` is to check if `ros2ai` is configured properly.
+- `ros2 ai` without a request starts the interactive session, and `ros2 ai --continue "<request>"` continues the previous session, so that the follow-up requests can refer to the previous ones.
 
 ---
 
-# Future Plans
+# Tool Calling Policy
 
-<!---
-# These are just ideas, not even sure that is doable.
---->
-
----
-
-# Model Comparison
-
-- Experimental performance and accuracy comparison over different LLM models.
-
-<!---
-# Comment Here
---->
+- Every tool maps to [ros2cli](https://github.com/ros2/ros2cli), executed without shell. The commands that change the system are printed, `--trace` prints every tool call with its output.
+- **read-only** (`node`, `topic list/info/echo`, `param get`...) run automatically.
+- **mutating** (`topic pub`, `service call`, `param set`...) require confirmation, `--yes` skips it, `--dry-run` only prints the candidates.
+- **long-running** (`run`, `launch`, `bag record`...) require confirmation and run in foreground until `Ctrl-C`.
+- **composite** (`get_node_status`, `get_topic_status`) run several commands in one call and return a YAML summary with warnings.
 
 ---
 
-# API Parameter Adjustment
+# Documentation Grounding
 
-- for more stable AI behavior.
-- performance and accuracy comparison.
-- latency for user experience.
-
-<!---
-# Comment Here
---->
+- The answers about ROS 2 concepts, tutorials, tools and APIs are grounded on the official [ROS 2 documentation](https://docs.ros.org/en/rolling/) of the running distribution (`ROS_DISTRO`), and cite the page.
+- `search_ros2_docs` and `read_ros2_docs` look up the [documentation sources](https://github.com/ros2/ros2_documentation) cached locally (`~/.cache/ros2ai/docs/<distro>`), downloaded once per distribution and refreshed weekly, offline afterwards.
+- Multi-language support stays on the mainline documentation, the model translates on demand.
 
 ---
 
-# Context-Awareness
-
-currently, `ros2ai` only supports single-shot completion API, that means we can not rely on the previous questions or answers to make further requests. e.g) "Is /chatter topic available?", "Subscribe it!". This ***it*** should be recognized in the same context or session. If this command is issued, prompt should be initiated to keep the session alive until the entire session is closed by the user.
-
-<!---
-# probably with LangChain::ConversationBufferMemory
---->
-
----
-
-# Daemonized Agent
-
-`ros2ai` can instantiate the agent daemon process as ROS 2 service, so that even other ROS 2 application running in the network can use OpenAI API via this proxy. those ROS 2 application can be agnostic from LLM specific APIs but ROS 2 service interface.
-
-<!---
-# Comment Here
---->
-
----
-
-# Audio Interface Support
+# Audio Interface Support??
 
 It would be really helpful to iterate via audio system instead of typing anymore.
 So the user can just talk to the `ros2ai` agent and then `ros2ai` answers any questions and executes the corresponding operations as user wants to do.
@@ -190,26 +139,10 @@ So the user can just talk to the `ros2ai` agent and then `ros2ai` answers any qu
 
 ---
 
-# Function Calling
+# Happy ROSing !!!
 
-for more user friendly experience, user should not be aware of `ros2ai` sub-command at all such as query, execute. this is actually against the design policy for `ros2ai`.
-we could take advantage of [Function Calling](https://platform.openai.com/docs/guides/function-calling) to conceal these sub-commands, and internally categorize the request based on the user input.
+![bg right:50% 50%](./images/qrcode_image.png)
 
 <!---
 # Comment Here
---->
-
----
-
-# Fine-tuning
-
-- ROS 2 general fine-tuning
-  - this requires scaled training dataset for ROS 2, agnostic from user environment. could be distro specific. so that AI can response more precisely based on questions and requests.
-- User specified environment tuning
-  - this dataset should be uploaded to help more user specific problems and questions. if this is doable, `ros2ai` agent can the 1st customer support for anyone?
-
-<!---
-# what we need to do is automate this fine-tuning process based on user's environment including distro.
-# this seems like a mandatory, because user's environment is really different one to another.
-# data set creation must be done by each user, and automated by script or some tools.
 --->
