@@ -40,12 +40,20 @@ function install_prerequisites () {
     apt update && apt upgrade -y
     # TODO@fujitatomoya: should install openai via package.xml
     apt install -y pip
-    if [ $UBUNTU_VERSION == "24.04" ]; then
-        pip install openai ollama validators --break-system-packages --ignore-installed
+    # Ubuntu 23.04 and later mark the base Python environment as externally
+    # managed (PEP 668), so `--break-system-packages` is required to pip install
+    # system-wide. Compare versions instead of matching a single release, so that
+    # newer Ubuntu bases (e.g. rolling moving from 24.04 to 26.04) keep working.
+    if [ "$(printf '%s\n' "23.04" "$UBUNTU_VERSION" | sort -V | head -n1)" = "23.04" ]; then
+        pip install openai validators --break-system-packages --ignore-installed
     else
-        pip install openai ollama validators --ignore-installed
+        pip install openai validators --ignore-installed
     fi
     #apt install -y ros-${ROS_DISTRO}-desktop --no-install-recommends
+    # test dependencies, see package.xml
+    apt install -y python3-pytest python3-pytest-timeout \
+        ros-${ROS_DISTRO}-ament-copyright ros-${ROS_DISTRO}-ament-flake8 \
+        ros-${ROS_DISTRO}-ament-pep257 ros-${ROS_DISTRO}-ament-xmllint
     cd $there
 }
 
@@ -62,9 +70,17 @@ function build_colcon_package () {
     echo "[${FUNCNAME[0]}]: build ros2ai package."
     source /opt/ros/${ROS_DISTRO}/setup.bash
     cd ${COLCON_WORKSPACE}
-    # TODO@fujitatomoya: extend this with `colcon test`.
-    #  Once ollama is supported, we can integrate `verification.sh` via github workflow as 1st.
     colcon build --symlink-install --packages-select ros2ai
+}
+
+function test_colcon_package () {
+    trap exit_trap ERR
+    echo "[${FUNCNAME[0]}]: test ros2ai package."
+    source /opt/ros/${ROS_DISTRO}/setup.bash
+    cd ${COLCON_WORKSPACE}
+    # TODO@fujitatomoya: `verification.sh` requires the LLM API endpoint, that is not integrated.
+    colcon test --packages-select ros2ai --event-handlers console_cohesion+
+    colcon test-result --verbose
 }
 
 ########
@@ -86,5 +102,6 @@ get_ubuntu_version
 install_prerequisites
 setup_build_colcon_env
 build_colcon_package
+test_colcon_package
 
 exit 0
