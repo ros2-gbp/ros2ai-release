@@ -12,43 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import shlex
 import signal
 import subprocess
-import os
-import re
 
-def run_command(*, command, argv = None, prefix = None):
-    """
-    Execute command line interface with arguments. (Blocking)
 
-    :command: commands to be executed, possibly comes with arguments.
-    :argv: extra arguments, added after command argument.
-    :prefix: prefix added to before command argument.
+def run_executable(*, command) -> int:
     """
-    if prefix is not None:
-        command = prefix + command
+    Execute command line interface with arguments. (Interactive).
+
+    The command is never executed via shell, so that no shell expansion or chaining happens.
+
+    :param command: command to be executed as argument list, or a string split by shlex.
+    :return: the child process return code.
+    """
+    argv = shlex.split(command) if isinstance(command, str) else list(command)
+    if not argv:
+        print('[ros2ai]: empty command, nothing to execute.')
+        return 1
     try:
-        result = subprocess.run(
-            command, shell = True, capture_output = True, text = True, check = True)
-        print(result.stdout)
-    except subprocess.CalledProcessError as ex:
-        print(f"Error executing the command. Return Code: {ex.returncode} {ex.stderr}")
-    except Exception as ex:
-        print(f"Subprocess generates exception: {ex}")
-
-def run_executable(*, command, argv = None, prefix=None) -> int:
-    """
-    Execute command line interface with arguments. (Interactive)
-
-    :command: commands to be executed, possibly comes with arguments.
-    :argv: extra arguments, added after command argument.
-    :prefix: prefix added to before command argument.
-    :return: the child process return code
-    """
-    if prefix is not None:
-        command = prefix + command
-
-    process = subprocess.Popen(command, shell = True)
+        process = subprocess.Popen(argv)
+    except OSError as e:
+        print(f'[ros2ai]: failed to execute {shlex.join(argv)}: {e}')
+        return 1
 
     # add signal handler for the parent process, so that we can finalize the child process
     # child process could be `ros2 run` process and that also should pass the signal to
@@ -59,24 +46,30 @@ def run_executable(*, command, argv = None, prefix=None) -> int:
             # If child process is running, forward the signal to it
             process.send_signal(sig)
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
-    while process.returncode is None:
-        try:
-            process.communicate()
-        except KeyboardInterrupt:
-            pass
+    # the previous handlers are restored when the command exits, the interactive session
+    # continues after the command and Ctrl-C has to abort the request again
+    previous = {
+        sig: signal.signal(sig, signal_handler) for sig in (signal.SIGINT, signal.SIGTERM)}
+    try:
+        while process.returncode is None:
+            try:
+                process.communicate()
+            except KeyboardInterrupt:
+                pass
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler if handler is not None else signal.SIG_DFL)
     if process.returncode != 0:
         if -process.returncode in signal.valid_signals():
             print(signal.strsignal(-process.returncode))
     return process.returncode
 
+
 def get_ros_distro() -> str:
     """
     Fetch ROS_DISTRO environmental variable.
 
-    :return: string of distribution name.
+    :return: string of distribution name, 'rolling' if not set.
     """
     distro = os.environ.get('ROS_DISTRO')
     if not distro:
@@ -84,72 +77,18 @@ def get_ros_distro() -> str:
         return 'rolling'
     return distro.lower()
 
-def truncate_before_substring(*, original, substring) -> str:
+
+def truncate_output(output: str, limit: int) -> str:
     """
-    Truncates a string by removing anything before a specified substring,
-    and removes the newline character at the end if it exists.
+    Truncate a command output to the limit, keeping the head and the tail.
 
-    :original: original string to be truncated.
-    :substring: substring before which the string should be truncated.
-    :return: string with anything before the specified substring removed,
-      or the original string if the substring is not found.
+    :param output: original output.
+    :param limit: maximum number of characters.
+    :return: the original output if within the limit, otherwise the truncated output.
     """
-    index = original.find(substring)
-    if index != -1:
-        # If found, truncate the string before the substring and return
-        truncated = original[index:]
-
-        # Find the index of newline character in the truncated text
-        newline_index = truncated.find('\n')
-        if newline_index != -1:
-            # If newline character exists, truncate the string after the newline character
-            truncated = truncated[:newline_index]
-
-        return truncated
-
-    else:
-        # If the substring is not found, return the original text
-        return original
-
-def remove_backticks(original) -> str:
-    """
-    Removes all backticks from a given string.
-
-    :original: The original input string.
-    :return: The string without backticks.
-    """
-    return original.replace('`', '')
-
-def ros2_single_command(original) -> str:
-    """
-    Check if the command string contains only a single command (no command separators).
-    If multiple commands are found, extract the first 'ros2' command and warn the user.
-
-    :original: The original command string to validate.
-    :return: The validated single command string, or the first 'ros2' command if multiple found.
-    """
-    # Common command separators in shell
-    separators = [';', '&&', '||', '&', '|']
-
-    # Strip whitespace and check for separators
-    cleaned_command = original.strip()
-
-    # Check if command contains separators
-    has_separators = any(separator in cleaned_command for separator in separators)
-
-    if has_separators:
-        print(f"Warning: Multiple commands detected in \"{original}\". Only the first 'ros2' command will be executed.")
-
-        # Split by all separators and find first ros2 command
-        pattern = '|'.join(re.escape(sep) for sep in separators)
-        commands = re.split(pattern, cleaned_command)
-
-        for cmd in commands:
-            cmd = cmd.strip()
-            if cmd.startswith('ros2'):
-                return cmd
-
-        # If no ros2 command found, return the first command
-        return commands[0].strip() if commands else ""
-
-    return cleaned_command
+    if len(output) <= limit:
+        return output
+    head = limit * 2 // 3
+    tail = limit - head
+    removed = len(output) - limit
+    return output[:head] + f'\n... [{removed} characters truncated] ...\n' + output[-tail:]
